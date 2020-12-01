@@ -1,148 +1,28 @@
-# SWAG
+# SWAG-Diagonal
 
 [A simple baseline for bayesian uncertainty in deep learning](https://arxiv.org/abs/1902.02476) suggests the bayesian inference using stochastic weight averaging(SWA) with Gaussian-modeled weights(SWAG).
 
 
-## SWA weights based on model averaging
-SWA use the average value of the weights over the training epochs.
-$$\theta_{SWA} = \frac{1}{T} \sum_{i=1}^{T} \theta_i$$
-
-## Diagonal covariance of SWAG weights
-To get gaussian-modeled weights for bayesian inference, we have to define the covariance of them.
-$$ \bar{\theta^2} = \frac{1}{T} \sum_{i=1}^{T} \theta^2_i \\$$
-$$\Sigma_{diag} = diag(\bar{\theta^2} - \theta^2_{SWA})$$
-
-## Suggested bayesian weight
-$$\mathcal{N}(\theta_{SWA}, \Sigma_{Diag})$$
-
-Note that this notebook deals with one scalar parameter. In practice, we will adapt this for vectors of weights.
-
-
-```python
-import matplotlib.pyplot as plt
-import matplotlib
-import numpy as np
-import math
-matplotlib.style.use('ggplot')
-```
 
 # Uncertainty of unstable weight
 
-
-```python
-length = 100
-theta = np.random.randn(length) + np.array(list(map(lambda x:x*(x-20), range(-length//2,length//2))))/length
-#theta = np.random.randn(length) + np.arange(length)/100
-
-theta_swa = []
-theta_bar_square = []
-
-for i in range(len(theta)):
-    sum_theta = 0
-    sum_theta_square = 0
-    for j in range(i+1):
-        sum_theta += theta[j]
-        sum_theta_square += theta[j]*theta[j]
-    theta_swa.append(sum_theta/(i+1))
-    theta_bar_square.append(sum_theta_square/(i+1))
     
-theta_bar_square = np.array(theta_bar_square)
-theta_swa_square = np.array(list(map(lambda x:x*x, theta_swa)))
-
-var = np.sqrt(np.abs(theta_bar_square - theta_swa_square))
-```
-
-
-```python
-fig = plt.figure(figsize=(14,8))
-plt.plot(theta)
-plt.plot(theta_swa)
-plt.fill_between(range(length),theta_swa-var/2, theta_swa+var/2, color='black', alpha=0.2)
-plt.xlabel("SGD epochs", fontsize=20)
-plt.ylabel("weight value", fontsize=20)
-plt.legend(["theta", "theta_swa"], fontsize=20)
-plt.savefig('theta_swa.png', dpi=300)
-```
-
-
+![png](SWAG_weight_experiments_files/SWAG_weight_experiments_4_0.png)
     
-![png](output_4_0.png)
+![png](SWAG_weight_experiments_files/SWAG_weight_experiments_5_0.png)
     
 
-
-
-```python
-fig = plt.figure(figsize=(14,8))
-plt.plot(var, color='g')
-plt.xlabel("SGD epochs", fontsize=20)
-plt.legend(["var"], fontsize=20)
-plt.savefig('var.png', dpi=300)
-```
-
-
-    
-![png](output_5_0.png)
-    
-
-
-## At the end of the day, we will make 1-dimensional Gaussian for a weight using the final variance
 
 # Uncertainty of converged weight
-
-
-```python
-length = 100
-#theta = np.random.randn(length) + np.array(list(map(lambda x:x*(x-120), range(-length//2,length//2))))/length
-theta = np.random.randn(length)/np.arange(1,length+1) #+ np.arange(length)/100
-
-theta_swa = []
-theta_bar_square = []
-
-for i in range(len(theta)):
-    sum_theta = 0
-    sum_theta_square = 0
-    for j in range(i+1):
-        sum_theta += theta[j]
-        sum_theta_square += theta[j]*theta[j]
-    theta_swa.append(sum_theta/(i+1))
-    theta_bar_square.append(sum_theta_square/(i+1))
     
-theta_bar_square = np.array(theta_bar_square)
-theta_swa_square = np.array(list(map(lambda x:x*x, theta_swa)))
-
-var = np.sqrt(np.abs(theta_bar_square - theta_swa_square))
-```
-
-
-```python
-fig = plt.figure(figsize=(14,8))
-plt.plot(theta)
-plt.plot(theta_swa)
-plt.fill_between(range(length),theta_swa-var/2, theta_swa+var/2, color='black', alpha=0.2)
-plt.xlabel("SGD epochs", fontsize=20)
-plt.ylabel("weight value", fontsize=20)
-plt.legend(["theta", "theta_swa"], fontsize=20)
-plt.savefig('theta_swa_converge.png', dpi=300)
-```
-
-
+![png](SWAG_weight_experiments_files/SWAG_weight_experiments_9_0.png)
     
-![png](output_9_0.png)
-    
-
-
-
-```python
-fig = plt.figure(figsize=(14,8))
-plt.plot(var, color='g')
-plt.xlabel("SGD epochs", fontsize=20)
-plt.legend(["var"], fontsize=20)
 plt.savefig('var_converge.png', dpi=300)
 ```
 
 
     
-![png](output_10_0.png)
+![png](SWAG_weight_experiments_files/SWAG_weight_experiments_10_0.png)
     
 
 
@@ -240,19 +120,19 @@ plt.show()
 
 
     
-![png](output_12_1.png)
+![png](SWAG_weight_experiments_files/SWAG_weight_experiments_12_1.png)
     
 
 
 
     
-![png](output_12_2.png)
+![png](SWAG_weight_experiments_files/SWAG_weight_experiments_12_2.png)
     
 
 
 
     
-![png](output_12_3.png)
+![png](SWAG_weight_experiments_files/SWAG_weight_experiments_12_3.png)
     
 
 
@@ -269,9 +149,26 @@ plt.show()
 
 
     
-![png](output_13_0.png)
+![png](SWAG_weight_experiments_files/SWAG_weight_experiments_13_0.png)
     
 
+
+# Bayesian inference with SWAG weights
+
+## MAP optimization
+
+We can maximize log posterior:
+$$log p(\theta|\mathcal{D}) = log p(\mathcal{D}|\theta) + log p(\theta)$$
+We can consider the prior $p(\theta)$ as the regularizer in optimization (L1, L2). **But it is not Bayesian inference** since the maximum posterior $\hat{\theta}_{MAP}$ is **determined** so we cannot get non-deterministic outputs (without uncertainty predictions).
+
+## Marginalized predictive distribution
+So we marginalizes the posterior distribution over all possible $\theta$.
+$$p(y|\mathcal{D},x) = \int p(y|\theta,x) p(\theta|\mathcal{D})$$
+In practice, we can approximate this intractable value with Monte carlo sampling.
+$$p(y|\mathcal{D},x) \approx \frac{1}{T} \sum_{t} p(y|\theta_t,x)$$
+$$\theta_t \sim p(\theta|\mathcal{D})$$
+
+**We can extract the prediction uncertainty by calculating empirical variance of $p(y|\mathcal{D},x)$**
 
 
 ```python
